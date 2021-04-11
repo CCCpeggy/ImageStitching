@@ -3,7 +3,18 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
-void  HarrisCornerDetection::Process(cv::Mat &img)
+PointData::PointData(int x, int y, float weight): x(x), y(y), weight(weight)
+{
+}
+
+bool PointData::operator<(const PointData& p) const
+{
+	if (weight != p.weight) return weight >= p.weight;
+	else if (x != p.x) return x >= p.x;
+	return y >= p.y;
+}
+
+std::vector<std::pair<int, int>>  HarrisCornerDetection::Process(cv::Mat &img)
 {
 	cv::Mat edge = img.clone();
 	//cv::Mat edge = cv::Mat(img.rows, img.cols, CV_8UC3);
@@ -25,32 +36,61 @@ void  HarrisCornerDetection::Process(cv::Mat &img)
 	cv::Mat Tr = A + B;
 	cv::Mat Det = A.mul(B) - C.mul(C);
 	cv::Mat R = Det - (Tr.mul(Tr)) * k;
+	std::vector<PointData> points;
 	for (int x = 0; x < img.cols; x++) {
 		for (int y = 0; y < img.rows; y++) {
-			float a = A.at<float>(y, x);
-			float b = B.at<float>(y, x);
-			float c = C.at<float>(y, x);
 			float det = Det.at<float>(y, x);
 			float tr = Tr.at<float>(y, x);
 			/*float Tr = a + b;
 			float Det = a * b - c * c;
 			float R = Det - k * Tr * Tr;*/
 			float r = R.at<float>(y, x);
-			if (r > 8000000000) {
+			points.push_back(PointData(x, y, r));
+			/*if (r > 8000000000) {
 				cv::circle(corner, cv::Point(x, y), 1, cv::Scalar(255, 0, 0), -1);
 			}
 			else if (r < -2000000){
 				cv::circle(edge, cv::Point(x, y), 1, cv::Scalar(0, 255, 0), -1);
-			}
-			if (det/tr > 100) {
+			}*/
+			/*if (det/tr > 100) {
 				cv::circle(corner, cv::Point(x, y), 1, cv::Scalar(0, 0, 255), -1);
-			}
+			}*/
 		}
 	}
+	std::sort(points.begin(), points.end());
+	int r = img.rows + img.cols;
+	const int featureTotal = 80;
+	int featurePointIdxs[featureTotal];
+	std::vector<std::pair<int, int>> featurePoints;
+	for (int i = 0; i < featureTotal; i++) {
+		int newFeaturePointIdx = -1;
+		while (newFeaturePointIdx < 0) {
+			for (int j = 0; newFeaturePointIdx < 0 && j < points.size() && (j < points.size() * 0.03 || j < newFeaturePointIdx * 10); j++) {
+				bool valid = true;
+				const PointData& p = points[j];
+				for (int k = 0; k < i; k++) {
+					const PointData& fp = points[featurePointIdxs[k]];
+					float dis_2 = (p.x - fp.x) * (p.x - fp.x) + (p.y - fp.y) * (p.y - fp.y);
+					if (dis_2 < r * r) {
+						valid = false;
+						break;
+					}
+				}
+				if (valid) {
+					newFeaturePointIdx = j;
+					cv::circle(corner, cv::Point(p.x, p.y), 1, cv::Scalar(255, 0, 0), -1);
+					featurePoints.push_back(std::pair<int, int>(p.x, p.y));
+				}
+			}
+			if (newFeaturePointIdx < 0) r *= 0.97;
+		}
+		featurePointIdxs[i] = newFeaturePointIdx;
+	}
+	std::cout << "r: " << r << std::endl;
 	cv::imwrite("gradientX.png", Ix);
 	cv::imwrite("gradientY.png", Iy);
 	cv::imwrite("corner.png", corner);
-	cv::imwrite("edge.png", edge);
+	return featurePoints;
 }
 
 

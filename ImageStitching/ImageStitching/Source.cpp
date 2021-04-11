@@ -5,10 +5,10 @@
 #include <iostream>
 
 int main() {
-	cv::Mat img = cv::imread("../../Images/test/edge_dectection.png");
+	cv::Mat img = cv::imread("../../Images/test/edge_dectection_guassian.png");
 	assert(!img.empty());
 	
 
-	HarrisCornerDetection::Process(img);
+	std::vector<std::pair<int, int>> featurePoints = HarrisCornerDetection::Process(img);
 
 }

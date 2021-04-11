@@ -4,6 +4,7 @@
 cv::Mat Common::GetGradientX(cv::Mat& img)
 {
 	cv::Mat kernel = cv::Mat(1, 3, CV_32F, new float[1][3]{ {-1, 0, 1} });
+	cv::Mat kernel2 = cv::Mat(3, 3, CV_32F, new float[3][3]{ {-1, 0, 1}, {-2, 0, 2}, {-1, 0, 1} });
 	cv::Mat gradient = Convolution(img, kernel);
 	return gradient;
 
@@ -12,6 +13,7 @@ cv::Mat Common::GetGradientX(cv::Mat& img)
 cv::Mat Common::GetGradientY(cv::Mat& img)
 {
 	cv::Mat kernel = cv::Mat(3, 1 , CV_32F, new float[3][1]{ {-1}, {0}, {1} });
+	cv::Mat kernel2 = cv::Mat(3, 3, CV_32F, new float[3][3]{ {-1, -2, -1}, {0, 0, 0}, {1, 2, 1} });
 	cv::Mat gradient = Convolution(img, kernel);
 	return gradient;
 }
@@ -48,7 +50,7 @@ cv::Mat Common::Convolution(cv::Mat& img, cv::Mat& kernel)
 						sum += img.at<float>(newY, newX) * kernel.at<float>(j, i);
 				}
 			}
-			result.at<float>(y, x) = sum;
+			result.at<float>(y, x) = std::abs(sum);
 		}
 	}
 	return result;
