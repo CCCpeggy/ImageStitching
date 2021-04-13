@@ -1,5 +1,6 @@
 #include "HarrisCornerDetection.h"
 #include "Common.h"
+#include <iostream>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
@@ -14,17 +15,30 @@ bool PointData::operator<(const PointData& p) const
 	return y >= p.y;
 }
 
-std::vector<std::pair<int, int>>  HarrisCornerDetection::Process(cv::Mat &img)
+std::vector<std::pair<int, int>>  HarrisCornerDetection::Process(cv::Mat& _img)
 {
-	cv::Mat edge = img.clone();
-	//cv::Mat edge = cv::Mat(img.rows, img.cols, CV_8UC3);
-	cv::Mat corner = img.clone();
-	//cv::Mat corner = cv::Mat(img.rows, img.cols, CV_8UC3);
-	cv::cvtColor(img, img, cv::COLOR_RGB2GRAY);
+	cv::Mat img = _img.clone();
+	cv::GaussianBlur(img, img, cv::Size(5, 5), 0);
+	cv::Mat corner = _img.clone();
+	cv::Mat grayImg = cv::Mat(img.rows, img.cols, CV_8UC1);
+	cv::cvtColor(img, grayImg, cv::COLOR_RGB2GRAY);
 	cv::Mat w = CreateWeightImg();
 
-	cv::Mat Ix = Common::GetGradientX(img);
-	cv::Mat Iy = Common::GetGradientY(img);
+	/*cv::Mat rgbImg[3];
+	cv::split(img, rgbImg);
+	cv::Mat rgbImgX[3] = { Common::GetGradientX(rgbImg[0]),Common::GetGradientX(rgbImg[1]), Common::GetGradientX(rgbImg[2]) };
+	cv::Mat rgbImgY[3] = { Common::GetGradientY(rgbImg[0]),Common::GetGradientY(rgbImg[1]), Common::GetGradientY(rgbImg[2]) };*/
+	cv::Mat Ix = Common::GetGradientX(grayImg);
+	cv::Mat Iy = Common::GetGradientY(grayImg);
+	// for (int j = 0; j < img.rows; j++) {
+	// 	for (int i = 0; i < img.cols; i++) {
+	// 		Ix.at<float>(j, i) = std::max(std::max(rgbImgX[0].at<float>(j, i), rgbImgX[1].at<float>(j, i)), rgbImgX[2].at<float>(j, i));
+	// 		Iy.at<float>(j, i) = std::max(std::max(rgbImgY[0].at<float>(j, i), rgbImgY[1].at<float>(j, i)), rgbImgY[2].at<float>(j, i));
+	// 	}
+	// }
+	//Ix = Ix * 0.5 + Common::GetGradientX(grayImg) * 0.8;
+	// cv::Mat Iy = (Common::GetGradientY(rgbImg[0]) + Common::GetGradientY(rgbImg[1]) + Common::GetGradientY(rgbImg[2])) / 3;
+	// cv::Mat Iy = Common::GetGradientY(img);
 	cv::Mat Ix_2 = Ix.mul(Ix);
 	cv::Mat Iy_2 = Iy.mul(Iy);
 	cv::Mat IxIy = Ix.mul(Iy);
@@ -58,20 +72,21 @@ std::vector<std::pair<int, int>>  HarrisCornerDetection::Process(cv::Mat &img)
 		}
 	}
 	std::sort(points.begin(), points.end());
-	int r = img.rows + img.cols;
-	const int featureTotal = 80;
+	int r = std::min(img.rows, img.cols);
+	const int featureTotal = 350;
 	int featurePointIdxs[featureTotal];
 	std::vector<std::pair<int, int>> featurePoints;
 	for (int i = 0; i < featureTotal; i++) {
 		int newFeaturePointIdx = -1;
 		while (newFeaturePointIdx < 0) {
-			for (int j = 0; newFeaturePointIdx < 0 && j < points.size() && (j < points.size() * 0.03 || j < newFeaturePointIdx * 10); j++) {
-				bool valid = true;
+			for (int j = 0; newFeaturePointIdx < 0 && j < points.size() && (j < points.size() * 0.04 || j < newFeaturePointIdx * 10); j++) {
 				const PointData& p = points[j];
+				if (p.x < 3 || p.y < 3 || p.x >= img.cols - 3 || p.y >= img.rows - 3) continue;
+				bool valid = true;
 				for (int k = 0; k < i; k++) {
 					const PointData& fp = points[featurePointIdxs[k]];
 					float dis_2 = (p.x - fp.x) * (p.x - fp.x) + (p.y - fp.y) * (p.y - fp.y);
-					if (dis_2 < r * r) {
+					if (dis_2 < r * r ) {
 						valid = false;
 						break;
 					}
@@ -82,7 +97,7 @@ std::vector<std::pair<int, int>>  HarrisCornerDetection::Process(cv::Mat &img)
 					featurePoints.push_back(std::pair<int, int>(p.x, p.y));
 				}
 			}
-			if (newFeaturePointIdx < 0) r *= 0.97;
+			if (newFeaturePointIdx < 0) r *= 0.95;
 		}
 		featurePointIdxs[i] = newFeaturePointIdx;
 	}

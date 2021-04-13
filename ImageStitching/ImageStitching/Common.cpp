@@ -56,9 +56,27 @@ cv::Mat Common::Convolution(cv::Mat& img, cv::Mat& kernel)
 	return result;
 }
 
-int Common::Clip(int n, int lower, int upper)
+cv::Mat Common::CropImg(cv::Mat& img, int x, int y, int width, int height)
 {
-	if (n < lower) return lower;
-	if (n > upper) return upper;
-	return n;
+	int left = x < 0 ? -x : 0;
+	int top = y < 0 ? -y : 0;
+	int right = (x + width) >= img.cols ? ((x + width) - img.cols) : 0;
+	int down = (y + height) >= img.rows ? ((y + height) - img.rows) : 0;
+	cv::Mat tmp = img(cv::Rect(x + left, y + top, width - left - right, height - top - down));
+	cv::copyMakeBorder(tmp, tmp, top, down, left, right, cv::BORDER_REPLICATE);
+
+	return tmp;
 }
+
+void Common::imshow(cv::Mat& img)
+{
+	cv::imshow("view", img);
+	cv::waitKey(0);
+}
+
+double Common::Gaussian(double x, double y, double sigma)
+{
+
+	return 1.0 / (2.0 * 3.14 * sigma * sigma) * std::exp(-(x * x + y * y) / (2.0 * sigma * sigma));
+}
+
