@@ -11,11 +11,15 @@
 
 ## How to Build
 
+* ``` bash
+  git submodule add https://github.com/jlblancoc/nanoflann.git ./ImageStitching/Dependency/nanoflann
+  ```
 * 在 Visual Studio 中，對專案名稱點右鍵，選擇`屬性`
   * 在屬性頁面中，將組態設為`所有組態`、平台設為`所有平台`
   * 選擇 `VC++ 目錄`
     * 修改 `Include 目錄` 中 Library 的路徑
     * 修改 `程式庫目錄` 中 Library 的路徑
+    * 
 * 即可進行編譯與執行程式
 
 ## Reference
