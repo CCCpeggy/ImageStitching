@@ -5,7 +5,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <iostream>
-#define GRAIL_TEST 
+#define HOME_TEST 
 
 int main() {
 #ifdef DENNY_TEST
@@ -65,6 +65,15 @@ int main() {
 	};
 	const int size = 2;
 #endif // GRAIL_TEST
+#ifdef HOME_TEST
+	cv::Mat img[] = {
+		//cv::imread("../../Images/test/home/home01.jpg"),
+		cv::imread("../../Images/test/home/home02.jpg"),
+		cv::imread("../../Images/test/home/home03.jpg"),
+		cv::imread("../../Images/test/home/home04.jpg"),
+	};
+	const int size = 3;
+#endif // HOME_TEST
 
 	cv::Mat result;
 	cv::hconcat(img, size, result);
