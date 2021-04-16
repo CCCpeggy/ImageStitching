@@ -57,8 +57,8 @@ std::vector<std::pair<int, int>>  HarrisCornerDetection::Process(cv::Mat& _img)
 	std::vector<PointData> points;
 	const int maxSize = 9;
 	const int margin = 3;
-	const int featureTotal =  300;
-	const int threashold = 100000000;
+	const int featureTotal =  1300;
+	const int threashold = 500;
 	for (int x = margin; x < img.cols - margin; x++) {
 		for (int y = margin; y < img.rows - margin; y++) {
 			//float det = Det.at<float>(y, x);
@@ -98,7 +98,8 @@ std::vector<std::pair<int, int>>  HarrisCornerDetection::Process(cv::Mat& _img)
 	}
 	std::cout << "found point: " << points.size() << std::endl;
 	std::sort(points.begin(), points.end());
-	int r = std::max(img.rows, img.cols) * 0.5;
+	int r = 20;
+	//int r = std::max(img.rows, img.cols) * 0.5;
 	int featurePointIdxs[featureTotal];
 	std::vector<std::pair<int, int>> featurePoints;
 	for (int i = 0; i < featureTotal; i++) {

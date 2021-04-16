@@ -120,7 +120,7 @@ void  SIFTFeatureDescripter::Match(std::vector<FeatureDescripterData>& featureVa
 			//double dis1 = Common::Distance<double>(featureValues1[i].value, featureValues2[retIndex[0]].value, DIM);
 			//double dis2 = Common::Distance<double>(featureValues1[i].value, featureValues2[retIndex[1]].value, DIM);
 			//if (dis2 >= 0.8 * dis1) continue;
-			if (outDistSqr[1] * 0.8 < outDistSqr[0]) continue;
+			if (outDistSqr[1] * 0.95 < outDistSqr[0]) continue;
 			featureValues1[i].matchPoint = &featureValues2[retIndex[0]];
 		}
 		else if (foundLine == 1){
@@ -150,6 +150,7 @@ void SIFTFeatureDescripter::MatchFilter(std::vector<FeatureDescripterData>& feat
 		if (ori[i] < 0) ori[i] += 360;
 		oriBox[((ori[i]+5) / 10) % 36] ++;
 	}
+	// 過濾角度
 	int maxOriIdx = 0;
 	for (int i = 1; i < 36; i++) {
 		if (oriBox[i] > oriBox[maxOriIdx]) maxOriIdx = i;
@@ -157,6 +158,7 @@ void SIFTFeatureDescripter::MatchFilter(std::vector<FeatureDescripterData>& feat
 	for (int i = 0; i < matchPoints.size(); i++) {
 		if (std::abs(ori[i] - maxOriIdx * 10) > 7) exist[i] = false;
 	}
+	// 過濾長度
 	int count = 0;
 	for (int i = 0; i < matchPoints.size(); i++) {
 		if (exist[i]) {
@@ -166,9 +168,10 @@ void SIFTFeatureDescripter::MatchFilter(std::vector<FeatureDescripterData>& feat
 	}
 	float magAvg = magTotal / count;
 	for (int i = 0; i < matchPoints.size(); i++) {
-		if (mag[i] > magAvg * 2 || mag[i] < magAvg * 0.4) exist[i] = false;
+		if (mag[i] > magAvg * 2.2 || mag[i] < magAvg * 0.3) exist[i] = false;
 	}
-
+	
+	// 將所有可能性跑一次，看哪一種誤差值最小
 	int minI = -1;
 	float minError = 0;
 	for (int i = 0; i < matchPoints.size(); i++) {
@@ -182,6 +185,7 @@ void SIFTFeatureDescripter::MatchFilter(std::vector<FeatureDescripterData>& feat
 			int dx2 = matchPoints[j].second->x - matchPoints[j].first->x;
 			int dy2 = matchPoints[j].second->y - matchPoints[j].first->y;
 			error += std::sqrt((dx - dx2) * (dx - dx2) + (dy - dy2) * (dy - dy2));
+			if (error > minError && minI >= 0) break;
 		}
 		if (minI < 0 || error < minError) {
 			minI = i;
@@ -189,6 +193,8 @@ void SIFTFeatureDescripter::MatchFilter(std::vector<FeatureDescripterData>& feat
 		}
 	}
 	std::cout << matchPoints[minI].first->x << " " << matchPoints[minI].first->y << std::endl;
+	 
+	// 將誤差值大的過濾
 	int dx = matchPoints[minI].second->x - matchPoints[minI].first->x;
 	int dy = matchPoints[minI].second->y - matchPoints[minI].first->y;
 	for (int j = 0; j < matchPoints.size(); j++) {
@@ -197,7 +203,7 @@ void SIFTFeatureDescripter::MatchFilter(std::vector<FeatureDescripterData>& feat
 		int dx2 = matchPoints[j].second->x - matchPoints[j].first->x;
 		int dy2 = matchPoints[j].second->y - matchPoints[j].first->y;
 		float error = std::sqrt((dx - dx2) * (dx - dx2) + (dy - dy2) * (dy - dy2));
-		if (error > 20) {
+		if (error > 15) {
 			exist[j] = false;
 		}
 	}
