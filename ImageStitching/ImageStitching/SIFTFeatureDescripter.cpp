@@ -110,7 +110,6 @@ void  SIFTFeatureDescripter::Match(std::vector<FeatureDescripterData>& featureVa
 	data.pts = featureValues2;
 	KDTree index1(DIM, data);
 	index1.buildIndex();
-	std::vector<std::pair<FeatureDescripterData*, FeatureDescripterData*> >  matchPoints;
 	std::vector<size_t>  retIndex(2);
 	std::vector<double> outDistSqr(2);
 	for (int i = 0; i < featureValues1.size(); i++) {
@@ -121,34 +120,55 @@ void  SIFTFeatureDescripter::Match(std::vector<FeatureDescripterData>& featureVa
 			//double dis1 = Common::Distance<double>(featureValues1[i].value, featureValues2[retIndex[0]].value, DIM);
 			//double dis2 = Common::Distance<double>(featureValues1[i].value, featureValues2[retIndex[1]].value, DIM);
 			//if (dis2 >= 0.8 * dis1) continue;
-			if (outDistSqr[1] * 0.7 < outDistSqr[0]) continue;
+			if (outDistSqr[1] * 0.8 < outDistSqr[0]) continue;
 			featureValues1[i].matchPoint = &featureValues2[retIndex[0]];
-			matchPoints.push_back(std::pair<FeatureDescripterData*, FeatureDescripterData*>(&featureValues1[i], &featureValues2[retIndex[0]]));
 		}
 		else if (foundLine == 1){
 			featureValues1[i].matchPoint = &featureValues2[retIndex[0]];
 		}
 	}
+}
+
+void SIFTFeatureDescripter::MatchFilter(std::vector<FeatureDescripterData>& featureValues)
+{
+	std::vector<std::pair<FeatureDescripterData*, FeatureDescripterData*> >  matchPoints;
+	for (int i = 0; i < featureValues.size(); i++) {
+		if (featureValues[i].matchPoint) {
+			matchPoints.push_back(std::pair<FeatureDescripterData*, FeatureDescripterData*>(&featureValues[i], featureValues[i].matchPoint));
+		}
+	}
 	std::vector<float> mag(matchPoints.size());
 	std::vector<int> ori(matchPoints.size());
+	std::vector<int> oriBox(36);
 	std::vector<bool> exist(matchPoints.size(), true);
-	float magTotal = 0, oriTotal = 0;
+	float magTotal = 0;
 	for (int i = 0; i < matchPoints.size(); i++) {
 		int dx = matchPoints[i].second->x - matchPoints[i].first->x;
 		int dy = matchPoints[i].second->y - matchPoints[i].first->y;
 		mag[i] = std::sqrt(dx * dx + dy * dy);
 		ori[i] = std::atan2f(dy, dx) * 180 / 3.14;
 		if (ori[i] < 0) ori[i] += 360;
-		magTotal += mag[i];
-		oriTotal += ori[i];
+		oriBox[((ori[i]+5) / 10) % 36] ++;
 	}
-	float magAvg = magTotal / matchPoints.size();
-	float oriAvg = oriTotal / matchPoints.size();
+	int maxOriIdx = 0;
+	for (int i = 1; i < 36; i++) {
+		if (oriBox[i] > oriBox[maxOriIdx]) maxOriIdx = i;
+	}
 	for (int i = 0; i < matchPoints.size(); i++) {
-		if (mag[i] > magAvg * 1.8 || mag[i] < magAvg * 0.5) exist[i] = false;
-		//if (ori[i] > oriAvg * 2 || ori[i] < oriAvg * 0.5) exist[i] = false;
+		if (std::abs(ori[i] - maxOriIdx * 10) > 7) exist[i] = false;
 	}
-	
+	int count = 0;
+	for (int i = 0; i < matchPoints.size(); i++) {
+		if (exist[i]) {
+			magTotal += mag[i];
+			count++;
+		}
+	}
+	float magAvg = magTotal / count;
+	for (int i = 0; i < matchPoints.size(); i++) {
+		if (mag[i] > magAvg * 2 || mag[i] < magAvg * 0.4) exist[i] = false;
+	}
+
 	int minI = -1;
 	float minError = 0;
 	for (int i = 0; i < matchPoints.size(); i++) {
@@ -177,7 +197,7 @@ void  SIFTFeatureDescripter::Match(std::vector<FeatureDescripterData>& featureVa
 		int dx2 = matchPoints[j].second->x - matchPoints[j].first->x;
 		int dy2 = matchPoints[j].second->y - matchPoints[j].first->y;
 		float error = std::sqrt((dx - dx2) * (dx - dx2) + (dy - dy2) * (dy - dy2));
-		if (error > 40) {
+		if (error > 20) {
 			exist[j] = false;
 		}
 	}

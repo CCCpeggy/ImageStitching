@@ -5,7 +5,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <iostream>
-#define DENNY_TEST 
+#define GRAIL_TEST 
 
 int main() {
 #ifdef DENNY_TEST
@@ -49,7 +49,7 @@ int main() {
 		cv::imread("../../Images/test/grail/grail16.jpg"),
 		cv::imread("../../Images/test/grail/grail17.jpg"),
 	};
-	const int size = 18;
+	const int size = 3;
 #endif // GRAIL_TEST
 #ifdef CSIE_TEST
 	cv::Mat img[] = {
@@ -63,7 +63,7 @@ int main() {
 		cv::imread("../../Images/test/csie/csie07.jpg"),
 		cv::imread("../../Images/test/csie/csie08.jpg"),
 	};
-	const int size = 9;
+	const int size = 2;
 #endif // GRAIL_TEST
 
 	cv::Mat result;
@@ -78,7 +78,8 @@ int main() {
 	int shift2 = 0;
 	for (int i = 0; i < size -1; i++) {
 		shift2 += img[i].cols;
-		SIFTFeatureDescripter::Match(featureValues[i], featureValues[i+1]);
+		SIFTFeatureDescripter::Match(featureValues[i], featureValues[i + 1]);
+		SIFTFeatureDescripter::MatchFilter(featureValues[i]);
 		for (int j = 0; j < featureValues[i].size(); j++) {
 			if (featureValues[i][j].matchPoint) {
 				cv::line(result

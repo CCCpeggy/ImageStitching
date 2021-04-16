@@ -57,7 +57,7 @@ std::vector<std::pair<int, int>>  HarrisCornerDetection::Process(cv::Mat& _img)
 	std::vector<PointData> points;
 	const int maxSize = 9;
 	const int margin = 3;
-	const int featureTotal =  200;
+	const int featureTotal =  300;
 	const int threashold = 100000000;
 	for (int x = margin; x < img.cols - margin; x++) {
 		for (int y = margin; y < img.rows - margin; y++) {

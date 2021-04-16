@@ -49,5 +49,6 @@ private:
 public:
 	static std::vector<FeatureDescripterData> Process(std::vector<std::pair<int, int>>& feature, cv::Mat& img);
 	static void Match(std::vector<FeatureDescripterData>& featureValues1, std::vector<FeatureDescripterData>& featureValues2);
+	static void MatchFilter(std::vector<FeatureDescripterData>& featureValues);
 };
 
