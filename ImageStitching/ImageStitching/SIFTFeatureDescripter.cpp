@@ -105,12 +105,12 @@ std::vector<FeatureDescripterData> SIFTFeatureDescripter::Process(std::vector<st
 }
 
 
-void SIFTFeatureDescripter::Match(std::vector<FeatureDescripterData>& featureValues1, std::vector<FeatureDescripterData>& featureValues2) {
+void  SIFTFeatureDescripter::Match(std::vector<FeatureDescripterData>& featureValues1, std::vector<FeatureDescripterData>& featureValues2) {
 	FeatureDescripterDatas data;
 	data.pts = featureValues2;
 	KDTree index1(DIM, data);
 	index1.buildIndex();
-
+	std::vector<std::pair<FeatureDescripterData*, FeatureDescripterData*> >  matchPoints;
 	std::vector<size_t>  retIndex(2);
 	std::vector<double> outDistSqr(2);
 	for (int i = 0; i < featureValues1.size(); i++) {
@@ -123,10 +123,67 @@ void SIFTFeatureDescripter::Match(std::vector<FeatureDescripterData>& featureVal
 			//if (dis2 >= 0.8 * dis1) continue;
 			if (outDistSqr[1] * 0.7 < outDistSqr[0]) continue;
 			featureValues1[i].matchPoint = &featureValues2[retIndex[0]];
+			matchPoints.push_back(std::pair<FeatureDescripterData*, FeatureDescripterData*>(&featureValues1[i], &featureValues2[retIndex[0]]));
 		}
 		else if (foundLine == 1){
 			featureValues1[i].matchPoint = &featureValues2[retIndex[0]];
 		}
 	}
-
+	std::vector<float> mag(matchPoints.size());
+	std::vector<int> ori(matchPoints.size());
+	std::vector<bool> exist(matchPoints.size(), true);
+	float magTotal = 0, oriTotal = 0;
+	for (int i = 0; i < matchPoints.size(); i++) {
+		int dx = matchPoints[i].second->x - matchPoints[i].first->x;
+		int dy = matchPoints[i].second->y - matchPoints[i].first->y;
+		mag[i] = std::sqrt(dx * dx + dy * dy);
+		ori[i] = std::atan2f(dy, dx) * 180 / 3.14;
+		if (ori[i] < 0) ori[i] += 360;
+		magTotal += mag[i];
+		oriTotal += ori[i];
+	}
+	float magAvg = magTotal / matchPoints.size();
+	float oriAvg = oriTotal / matchPoints.size();
+	for (int i = 0; i < matchPoints.size(); i++) {
+		if (mag[i] > magAvg * 1.8 || mag[i] < magAvg * 0.5) exist[i] = false;
+		//if (ori[i] > oriAvg * 2 || ori[i] < oriAvg * 0.5) exist[i] = false;
+	}
+	
+	int minI = -1;
+	float minError = 0;
+	for (int i = 0; i < matchPoints.size(); i++) {
+		if (!exist[i]) continue;
+		float error = 0;
+		int dx = matchPoints[i].second->x - matchPoints[i].first->x;
+		int dy = matchPoints[i].second->y - matchPoints[i].first->y;
+		for (int j = 0; j < matchPoints.size(); j++) {
+			if (!exist[j]) continue;
+			if (i == j) continue;
+			int dx2 = matchPoints[j].second->x - matchPoints[j].first->x;
+			int dy2 = matchPoints[j].second->y - matchPoints[j].first->y;
+			error += std::sqrt((dx - dx2) * (dx - dx2) + (dy - dy2) * (dy - dy2));
+		}
+		if (minI < 0 || error < minError) {
+			minI = i;
+			minError = error;
+		}
+	}
+	std::cout << matchPoints[minI].first->x << " " << matchPoints[minI].first->y << std::endl;
+	int dx = matchPoints[minI].second->x - matchPoints[minI].first->x;
+	int dy = matchPoints[minI].second->y - matchPoints[minI].first->y;
+	for (int j = 0; j < matchPoints.size(); j++) {
+		if (!exist[j]) continue;
+		if (minI == j) continue;
+		int dx2 = matchPoints[j].second->x - matchPoints[j].first->x;
+		int dy2 = matchPoints[j].second->y - matchPoints[j].first->y;
+		float error = std::sqrt((dx - dx2) * (dx - dx2) + (dy - dy2) * (dy - dy2));
+		if (error > 40) {
+			exist[j] = false;
+		}
+	}
+	for (int i = 0; i < matchPoints.size(); i++) {
+		if (!exist[i]) {
+			matchPoints[i].first->matchPoint = nullptr;
+		}
+	}
 }
