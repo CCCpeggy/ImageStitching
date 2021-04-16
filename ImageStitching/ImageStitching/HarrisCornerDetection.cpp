@@ -3,6 +3,9 @@
 #include <iostream>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui.hpp>
+#include <string>
+
+static int imgNo = 0;
 
 PointData::PointData(int x, int y, float weight): x(x), y(y), weight(weight)
 {
@@ -20,6 +23,7 @@ std::vector<std::pair<int, int>>  HarrisCornerDetection::Process(cv::Mat& _img)
 	cv::Mat img = _img.clone();
 	cv::GaussianBlur(img, img, cv::Size(5, 5), 0);
 	cv::Mat corner = _img.clone();
+	cv::Mat feature = _img.clone();
 	cv::Mat grayImg = cv::Mat(img.rows, img.cols, CV_8UC1);
 	cv::cvtColor(img, grayImg, cv::COLOR_RGB2GRAY);
 	cv::Mat w = CreateWeightImg();
@@ -51,15 +55,36 @@ std::vector<std::pair<int, int>>  HarrisCornerDetection::Process(cv::Mat& _img)
 	cv::Mat Det = A.mul(B) - C.mul(C);
 	cv::Mat R = Det - (Tr.mul(Tr)) * k;
 	std::vector<PointData> points;
-	for (int x = 0; x < img.cols; x++) {
-		for (int y = 0; y < img.rows; y++) {
-			float det = Det.at<float>(y, x);
-			float tr = Tr.at<float>(y, x);
+	const int maxSize = 9;
+	const int margin = 3;
+	const int featureTotal =  200;
+	const int threashold = 100000000;
+	for (int x = margin; x < img.cols - margin; x++) {
+		for (int y = margin; y < img.rows - margin; y++) {
+			//float det = Det.at<float>(y, x);
+			//float tr = Tr.at<float>(y, x);
 			/*float Tr = a + b;
 			float Det = a * b - c * c;
 			float R = Det - k * Tr * Tr;*/
 			float r = R.at<float>(y, x);
-			points.push_back(PointData(x, y, r));
+			if (r > threashold) {
+				bool isLocalMax = true;
+				for (int j = 0; isLocalMax && j < maxSize; j++) {
+					for (int i = 0; isLocalMax && i < maxSize; i++) {
+						int newX = x + i - maxSize / 2, newY = j + y - maxSize / 2;
+						if (!Common::InRange(newX, 0, img.cols - 1)) continue;
+						if (!Common::InRange(newY, 0, img.rows - 1)) continue;
+						float rr = R.at<float>(newY, newX);
+						if (rr > r) {
+							isLocalMax = false;
+						}
+					}
+				}
+				if (isLocalMax) {
+					points.push_back(PointData(x, y, r));
+					cv::circle(corner, cv::Point(x, y), 1, cv::Scalar(255, 0, 0), -1);
+				}
+			}
 			/*if (r > 8000000000) {
 				cv::circle(corner, cv::Point(x, y), 1, cv::Scalar(255, 0, 0), -1);
 			}
@@ -71,17 +96,16 @@ std::vector<std::pair<int, int>>  HarrisCornerDetection::Process(cv::Mat& _img)
 			}*/
 		}
 	}
+	std::cout << "found point: " << points.size() << std::endl;
 	std::sort(points.begin(), points.end());
-	int r = std::min(img.rows, img.cols);
-	const int featureTotal = 350;
+	int r = std::max(img.rows, img.cols) * 0.5;
 	int featurePointIdxs[featureTotal];
 	std::vector<std::pair<int, int>> featurePoints;
 	for (int i = 0; i < featureTotal; i++) {
 		int newFeaturePointIdx = -1;
 		while (newFeaturePointIdx < 0) {
-			for (int j = 0; newFeaturePointIdx < 0 && j < points.size() && (j < points.size() * 0.04 || j < newFeaturePointIdx * 10); j++) {
+			for (int j = 0; newFeaturePointIdx < 0 && j < points.size() /*&& (j < points.size() * 0.5 || j < newFeaturePointIdx * 40)*/; j++) {
 				const PointData& p = points[j];
-				if (p.x < 3 || p.y < 3 || p.x >= img.cols - 3 || p.y >= img.rows - 3) continue;
 				bool valid = true;
 				for (int k = 0; k < i; k++) {
 					const PointData& fp = points[featurePointIdxs[k]];
@@ -93,18 +117,20 @@ std::vector<std::pair<int, int>>  HarrisCornerDetection::Process(cv::Mat& _img)
 				}
 				if (valid) {
 					newFeaturePointIdx = j;
-					cv::circle(corner, cv::Point(p.x, p.y), 1, cv::Scalar(255, 0, 0), -1);
+					cv::circle(feature, cv::Point(p.x, p.y), 1, cv::Scalar(255, 0, 0), -1);
 					featurePoints.push_back(std::pair<int, int>(p.x, p.y));
 				}
 			}
-			if (newFeaturePointIdx < 0) r *= 0.95;
+			if (newFeaturePointIdx < 0) r *= 0.7;
 		}
 		featurePointIdxs[i] = newFeaturePointIdx;
 	}
 	std::cout << "r: " << r << std::endl;
-	cv::imwrite("gradientX.png", Ix);
-	cv::imwrite("gradientY.png", Iy);
-	cv::imwrite("corner.png", corner);
+	cv::imwrite(std::to_string(imgNo) + "_gradientX.png", Ix);
+	cv::imwrite(std::to_string(imgNo) + "_gradientY"".png", Iy);
+	cv::imwrite(std::to_string(imgNo) + "_corner.png", corner);
+	cv::imwrite(std::to_string(imgNo) + "_feature.png", feature);
+	imgNo += 1;
 	return featurePoints;
 }
 

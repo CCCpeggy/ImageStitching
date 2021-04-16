@@ -15,6 +15,8 @@ public:
 	template<typename T>
 	static T Clip(T n, T lower, T upper);
 	template<typename T>
+	static bool InRange(T n, T lower, T upper);
+	template<typename T>
 	static double Distance(T* arr1, T* arr2, int dim);
 	static double Gaussian(double x, double y, double sigma = 1);
 };
@@ -25,6 +27,13 @@ T Common::Clip(T n, T lower, T upper)
 	if (n < lower) return lower;
 	if (n > upper) return upper;
 	return n;
+}
+
+template<typename T>
+bool Common::InRange(T n, T lower, T upper)
+{
+	if (n < lower || n > upper) return false;
+	return true;
 }
 
 template<typename T>

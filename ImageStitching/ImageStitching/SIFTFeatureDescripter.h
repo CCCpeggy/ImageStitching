@@ -38,6 +38,7 @@ class SIFTFeatureDescripter
 private:
 	static const int ORIENTATION_KERNEL_SIZE;
 	static const int GLOBAL_ANGLE_RANGE;
+	static const int DIM;
 	std::vector<std::pair<int, int>>& inputFeature;
 	std::vector<FeatureDescripterData> featureData;
 	cv::Mat img;

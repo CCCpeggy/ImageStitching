@@ -51,11 +51,21 @@ int main() {
 	};
 	const int size = 18;
 #endif // GRAIL_TEST
+#ifdef CSIE_TEST
+	cv::Mat img[] = {
+		cv::imread("../../Images/test/csie/csie00.jpg"),
+		cv::imread("../../Images/test/csie/csie01.jpg"),
+		cv::imread("../../Images/test/csie/csie02.jpg"),
+		cv::imread("../../Images/test/csie/csie03.jpg"),
+		cv::imread("../../Images/test/csie/csie04.jpg"),
+		cv::imread("../../Images/test/csie/csie05.jpg"),
+		cv::imread("../../Images/test/csie/csie06.jpg"),
+		cv::imread("../../Images/test/csie/csie07.jpg"),
+		cv::imread("../../Images/test/csie/csie08.jpg"),
+	};
+	const int size = 9;
+#endif // GRAIL_TEST
 
-
-
-
-	assert(!img[0].empty() && !img[1].empty());
 	cv::Mat result;
 	cv::hconcat(img, size, result);
 	
