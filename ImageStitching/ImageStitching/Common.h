@@ -1,6 +1,18 @@
 #pragma once
 #include <opencv2/highgui.hpp>
 #include <opencv2/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <iostream>
+
+const int fSize = 11;
+
+struct FeatureDescriptor {
+	int x;
+	int y;
+	double* value;					// (fSize / 2)^2 dims
+	double diff;
+	FeatureDescriptor* matchPoint;
+};
 
 class Common
 {
@@ -19,6 +31,11 @@ public:
 	template<typename T>
 	static double Distance(T* arr1, T* arr2, int dim);
 	static double Gaussian(double x, double y, double sigma = 1);
+
+	// Find Feature Descriptor & Match Pair
+	static std::vector<FeatureDescriptor> Process(std::vector<std::pair<int, int>>& feature, cv::Mat& img);
+	static void Match(std::vector<FeatureDescriptor>& featureValues1, std::vector<FeatureDescriptor>& featureValues2);
+	static void MatchFilter(std::vector<FeatureDescriptor>& featureValues);
 };
 
 template<typename T>

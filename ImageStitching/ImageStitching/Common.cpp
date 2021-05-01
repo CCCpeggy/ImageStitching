@@ -1,5 +1,4 @@
 #include "Common.h"
-#include <cmath>
 
 cv::Mat Common::GetGradientX(cv::Mat& img)
 {
@@ -78,5 +77,169 @@ double Common::Gaussian(double x, double y, double sigma)
 {
 
 	return 1.0 / (2.0 * 3.14 * sigma * sigma) * std::exp(-(x * x + y * y) / (2.0 * sigma * sigma));
+}
+
+std::vector<FeatureDescriptor> Common::Process(std::vector<std::pair<int, int>>& feature, cv::Mat& _img) {
+	// 先將原圖轉灰階
+	cv::Mat img = cv::Mat(_img.rows, _img.cols, CV_8UC1);
+	cv::cvtColor(_img, img, cv::COLOR_RGB2GRAY);
+	std::vector<FeatureDescriptor> mTempFeatDesc;
+	for (int i = 0; i < feature.size(); i++) {
+		// 跳過邊界值
+		if (feature[i].first - fSize / 2 < 0 || feature[i].first + fSize / 2 >= img.cols ||
+			feature[i].second - fSize / 2 < 0 || feature[i].second + fSize / 2 >= img.rows)
+			continue;
+		// 如果不是位於邊界的特徵點，才給予描述子
+		FeatureDescriptor fd;
+		double* tempValues = new double[fSize * fSize];
+		for (int x = 0; x < fSize; x++) {
+			for (int y = 0; y < fSize; y++) {
+				int newX = feature[i].first + x - fSize / 2;
+				int newY = feature[i].second + y - fSize / 2;
+				newX = Clip<int>(newX, 0, img.cols - 1);
+				newY = Clip<int>(newY, 0, img.rows - 1);
+
+				tempValues[x * fSize + y] = img.at<uchar>(newY, newX);
+			}
+		}
+		fd.x = feature[i].first;
+		fd.y = feature[i].second;
+		fd.value = tempValues;
+		fd.matchPoint = nullptr;
+		fd.diff = INFINITY;
+		mTempFeatDesc.push_back(fd);
+	}
+	return mTempFeatDesc;
+}
+
+void Common::Match(std::vector<FeatureDescriptor>& fValues1, std::vector<FeatureDescriptor>& fValues2) {
+	int kPixels = 5;
+	for (int i = 0; i < fValues1.size(); i++) {
+		double minOfDiff = INFINITY;
+		int minIndex = -1;
+		for (int j = 0; j < fValues2.size(); j++) {
+			// 假設1: img[i]的x一定會大於img[i+1]的x, 因為拍照時是由左往右平移
+			if (fValues1[i].x <= fValues2[j].x)
+				continue;
+			// 假設2: 垂直偏量不能超過正負[kPixel]個px, 因為圖片集理想上不會有太大的垂直移動
+			float dy = fValues1[i].y - fValues2[j].y;
+			if (dy * dy > kPixels * kPixels)
+				continue;
+			// 如果兩個假設都符合, 則找出[1, fSize * fSize]維向量的最小差最為pair
+			double sumOfDiff = 0;
+			for (int k = 0; k < fSize * fSize; k++) {
+				double diff = fValues1[i].value[k] - fValues2[j].value[k];
+				sumOfDiff += (diff * diff);
+			}
+			if (sumOfDiff < minOfDiff) {
+				minOfDiff = sumOfDiff;
+				minIndex = j;
+			}
+		}
+		// 找到pair
+		if (minIndex != -1) {
+			fValues1[i].matchPoint = &fValues2[minIndex];
+			fValues1[i].diff = minOfDiff;
+		}
+	}
+}
+
+void Common::MatchFilter(std::vector<FeatureDescriptor>& featureValues) {
+	int N = featureValues.size();
+	double avg = 0;
+	for (int i = 0; i < N; i++) {
+		if (featureValues[i].matchPoint != nullptr)
+			avg += featureValues[i].diff;
+	}
+	avg /= (double)N;
+	for (int i = 0; i < N; i++) {
+		if (featureValues[i].matchPoint != nullptr &&
+			featureValues[i].diff > avg * 0.05) {
+			featureValues[i].matchPoint = nullptr;
+		}
+	}
+	/*
+	std::vector<std::pair<FeatureDescriptor*, FeatureDescriptor*> >  matchPoints;
+	for (int i = 0; i < featureValues.size(); i++) {
+		if (featureValues[i].matchPoint) {
+			matchPoints.push_back(std::pair<FeatureDescriptor*, FeatureDescriptor*>(&featureValues[i], featureValues[i].matchPoint));
+		}
+	}
+	std::vector<float> mag(matchPoints.size());
+	std::vector<int> ori(matchPoints.size());
+	std::vector<int> oriBox(36);
+	std::vector<bool> exist(matchPoints.size(), true);
+	float magTotal = 0;
+	for (int i = 0; i < matchPoints.size(); i++) {
+		int dx = matchPoints[i].second->x - matchPoints[i].first->x;
+		int dy = matchPoints[i].second->y - matchPoints[i].first->y;
+		mag[i] = std::sqrt(dx * dx + dy * dy);
+		ori[i] = std::atan2f(dy, dx) * 180 / 3.14;
+		if (ori[i] < 0) ori[i] += 360;
+		oriBox[((ori[i] + 5) / 10) % 36] ++;
+	}
+	// 過濾角度
+	int maxOriIdx = 0;
+	for (int i = 1; i < 36; i++) {
+		if (oriBox[i] > oriBox[maxOriIdx]) maxOriIdx = i;
+	}
+	for (int i = 0; i < matchPoints.size(); i++) {
+		if (std::abs(ori[i] - maxOriIdx * 10) > 7) exist[i] = false;
+	}
+	// 過濾長度
+	int counter = 0;
+	for (int i = 0; i < matchPoints.size(); i++) {
+		if (exist[i]) {
+			magTotal += mag[i];
+			counter++;
+		}
+	}
+	float magAvg = magTotal / counter;
+	for (int i = 0; i < matchPoints.size(); i++) {
+		if (mag[i] > magAvg * 2.2 || mag[i] < magAvg * 0.3) exist[i] = false;
+	}
+
+	// 將所有可能性跑一次，看哪一種誤差值最小
+	int minI = -1;
+	float minError = 0;
+	for (int i = 0; i < matchPoints.size(); i++) {
+		if (!exist[i]) continue;
+		float error = 0;
+		int dx = matchPoints[i].second->x - matchPoints[i].first->x;
+		int dy = matchPoints[i].second->y - matchPoints[i].first->y;
+		for (int j = 0; j < matchPoints.size(); j++) {
+			if (!exist[j]) continue;
+			if (i == j) continue;
+			int dx2 = matchPoints[j].second->x - matchPoints[j].first->x;
+			int dy2 = matchPoints[j].second->y - matchPoints[j].first->y;
+			error += std::sqrt((dx - dx2) * (dx - dx2) + (dy - dy2) * (dy - dy2));
+			if (error > minError && minI >= 0) break;
+		}
+		if (minI < 0 || error < minError) {
+			minI = i;
+			minError = error;
+		}
+	}
+	std::cout << matchPoints[minI].first->x << " " << matchPoints[minI].first->y << std::endl;
+
+	// 將誤差值大的過濾
+	int dx = matchPoints[minI].second->x - matchPoints[minI].first->x;
+	int dy = matchPoints[minI].second->y - matchPoints[minI].first->y;
+	for (int j = 0; j < matchPoints.size(); j++) {
+		if (!exist[j]) continue;
+		if (minI == j) continue;
+		int dx2 = matchPoints[j].second->x - matchPoints[j].first->x;
+		int dy2 = matchPoints[j].second->y - matchPoints[j].first->y;
+		float error = std::sqrt((dx - dx2) * (dx - dx2) + (dy - dy2) * (dy - dy2));
+		if (error > 3) {
+			exist[j] = false;
+		}
+	}
+	for (int i = 0; i < matchPoints.size(); i++) {
+		if (!exist[i]) {
+			matchPoints[i].first->matchPoint = nullptr;
+		}
+	}
+	*/
 }
 
