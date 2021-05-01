@@ -127,10 +127,10 @@ std::vector<std::pair<int, int>>  HarrisCornerDetection::Process(cv::Mat& _img)
 		featurePointIdxs[i] = newFeaturePointIdx;
 	}
 	std::cout << "r: " << r << std::endl;
-	cv::imwrite(std::to_string(imgNo) + "_gradientX.png", Ix);
-	cv::imwrite(std::to_string(imgNo) + "_gradientY"".png", Iy);
-	cv::imwrite(std::to_string(imgNo) + "_corner.png", corner);
-	cv::imwrite(std::to_string(imgNo) + "_feature.png", feature);
+	//cv::imwrite(std::to_string(imgNo) + "_gradientX.png", Ix);
+	//cv::imwrite(std::to_string(imgNo) + "_gradientY.png", Iy);
+	//cv::imwrite(std::to_string(imgNo) + "_corner.png", corner);
+	//cv::imwrite(std::to_string(imgNo) + "_feature.png", feature);
 	imgNo += 1;
 	return featurePoints;
 }
