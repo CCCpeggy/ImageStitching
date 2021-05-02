@@ -145,7 +145,7 @@ void Common::Match(std::vector<FeatureDescriptor>& fValues1, std::vector<Feature
 }
 
 void Common::MatchFilter(std::vector<FeatureDescriptor>& featureValues) {
-	/*
+	
 	int N = featureValues.size();
 	double avg = 0;
 	for (int i = 0; i < N; i++) {
@@ -159,8 +159,8 @@ void Common::MatchFilter(std::vector<FeatureDescriptor>& featureValues) {
 			featureValues[i].matchPoint = nullptr;
 		}
 	}
-	*/
 	
+	/*
 	std::vector<std::pair<FeatureDescriptor*, FeatureDescriptor*> >  matchPoints;
 	for (int i = 0; i < featureValues.size(); i++) {
 		if (featureValues[i].matchPoint) {
@@ -242,7 +242,7 @@ void Common::MatchFilter(std::vector<FeatureDescriptor>& featureValues) {
 			matchPoints[i].first->matchPoint = nullptr;
 		}
 	}
-	
+	*/
 }
 
 void Common::ProjectToCylinder(cv::Mat& src, cv::Mat& dest, float f) {

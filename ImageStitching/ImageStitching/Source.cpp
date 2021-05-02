@@ -185,40 +185,44 @@ int main() {
 	//return 0;
 
 	// blending的程式碼，還沒整理
-	cv::Mat result2(img[0].rows, img[0].cols * size, img[0].type());
-	for (int y = 0; y < img[0].rows; y++) {
-		for (int x = 0; x < img[0].cols; x++) {
-			for (int c = 0; c < 3; c++)
-				result2.at<cv::Vec3b>(y, x)[c] = img[0].at<cv::Vec3b>(y, x)[c];
-		}
-	}
+	int width = img[0].cols;
+	int height = img[0].rows;
+	result = img[0].clone();
+	int newWidth = width, newHeight = height;
 	int dx = 0, dy = 0;
 	for (int i = 1; i < size; i++) {
 		cv::Mat h = Common::FindHomography(featureValues[i - 1]);
 		int localDx = h.at<double>(0, 2);
 		int localDy = h.at<double>(1, 2);
-	
+		newWidth = (newWidth + localDx) > newWidth ? (newWidth + localDx) : newWidth;
+		newHeight = (newHeight + localDy) > newHeight ? (newHeight + localDy) : newHeight;
+		// copy
+		cv::Mat newImg(newHeight, newWidth, result.type());
+		for (int r = 0; r < result.rows; r++) {
+			for (int c = 0; c < result.cols; c++) {
+				newImg.at<cv::Vec3b>(r, c) = result.at<cv::Vec3b>(r, c);
+			}
+		}
+		newImg.copyTo(result);
+
 		for (int y = 0; y < img[i].rows; y++) {
-			for (int x = 0; x < img[i].cols; x++) {
+			for (int x = 0; x < width; x++) {
 				int newX = x + dx + localDx;
 				int newY = y + dy + localDy;
-				if (newX < result2.cols && newX >= 0 &&
-					newY < result2.rows && newY >= 0) {
+				if (newX < newWidth && newX >= 0 &&
+					newY < newHeight && newY >= 0) {
 	
-					cv::Scalar mColor = result2.at<cv::Vec3b>(newY, newX);
-					if (mColor != cv::Scalar(0, 0, 0)) {
-						double alpha = (double)((img[i].cols + dx) - newX) / (double)(img[i].cols - localDx);
-						if (alpha > 1)
-							std::cout << alpha << std::endl;
-						for (int c = 0; c < 3; c++) {
-							result2.at<cv::Vec3b>(newY, newX)[c] =
-								result2.at<cv::Vec3b>(newY, newX)[c] * alpha +
-								img[i].at<cv::Vec3b>(y, x)[c] * (1 - alpha);
-						}
+					cv::Vec3b lResultC = result.at<cv::Vec3b>(newY, newX);
+					cv::Vec3b lImgC = img[i].at<cv::Vec3b>(y, x);
+					if (lResultC != cv::Vec3b(0, 0, 0) && lImgC != cv::Vec3b(0, 0, 0)) {
+						double alpha = (((double)width + (double)dx) - (double)newX) / ((double)width - (double)localDx);
+						alpha = pow(alpha, 2);
+						result.at<cv::Vec3b>(newY, newX) =
+							result.at<cv::Vec3b>(newY, newX) * alpha +
+							img[i].at<cv::Vec3b>(y, x) * (1 - alpha);
 					}
-					else
-						for (int c = 0; c < 3; c++)
-							result2.at<cv::Vec3b>(newY, newX)[c] = img[i].at<cv::Vec3b>(y, x)[c];
+					else if (lImgC != cv::Vec3b(0, 0, 0))
+						result.at<cv::Vec3b>(newY, newX) = img[i].at<cv::Vec3b>(y, x);
 				}
 			}
 		}
@@ -226,7 +230,7 @@ int main() {
 		dy += localDy;
 	}
 	// 輸出result.png
-	cv::imwrite("result.png", result2);
+	cv::imwrite("result.png", result);
 	return 0;
 
 	// 預設照片的順序是從左到右排好
