@@ -145,6 +145,7 @@ void Common::Match(std::vector<FeatureDescriptor>& fValues1, std::vector<Feature
 }
 
 void Common::MatchFilter(std::vector<FeatureDescriptor>& featureValues) {
+	
 	int N = featureValues.size();
 	double avg = 0;
 	for (int i = 0; i < N; i++) {
@@ -158,6 +159,7 @@ void Common::MatchFilter(std::vector<FeatureDescriptor>& featureValues) {
 			featureValues[i].matchPoint = nullptr;
 		}
 	}
+
 	/*
 	std::vector<std::pair<FeatureDescriptor*, FeatureDescriptor*> >  matchPoints;
 	for (int i = 0; i < featureValues.size(); i++) {
@@ -243,3 +245,33 @@ void Common::MatchFilter(std::vector<FeatureDescriptor>& featureValues) {
 	*/
 }
 
+void Common::ProjectToCylinder(cv::Mat& src, cv::Mat& dest, float f) {
+	int rows = src.rows, cols = src.cols;
+	cv::Mat mMapX(rows, cols, CV_32FC1, cv::Scalar(0));
+	cv::Mat mMapY(rows, cols, CV_32FC1, cv::Scalar(0));
+
+	for (int y = 0; y < rows; y++) {
+		float* ptrX = mMapX.ptr<float>(y);
+		float* ptrY = mMapY.ptr<float>(y);
+		for (int x = 0; x < cols; x++) {
+			int newX = x - cols / 2;
+			int newY = y - rows / 2;
+			float theta = atanf(newX / f);;
+			float castX = (newX / cosf(theta));
+			float castY = newY * sqrtf(castX * castX + f * f) / f;
+			castX += cols / 2;
+			castY += rows / 2;
+			if (castX >= 0 && castX < cols && castY >= 0 && castY < rows) {
+				ptrX[x] = castX;
+				ptrY[x] = castY;
+			}
+			else {
+				// ¸É¶Â¦â
+				ptrX[x] = -1;
+				ptrY[x] = -1;
+			}
+		}
+	}
+	cv::remap(src, dest, mMapX, mMapY, cv::INTER_CUBIC, cv::BORDER_CONSTANT, cv::Scalar(0));
+	//cv::imwrite("cylinder.png", dest);
+}

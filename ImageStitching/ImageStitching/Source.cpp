@@ -96,6 +96,11 @@ int main() {
 	const int size = 4;
 #endif // HOME_TEST
 
+	// cast to cylinder
+	for (int i = 0; i < size; i++) {
+		Common::ProjectToCylinder(img[i], img[i], 400);
+	}
+
 	// 最後結果圖
 	cv::Mat result;
 	// 水平連接多張照片

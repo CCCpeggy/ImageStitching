@@ -36,6 +36,8 @@ public:
 	static std::vector<FeatureDescriptor> Process(std::vector<std::pair<int, int>>& feature, cv::Mat& img);
 	static void Match(std::vector<FeatureDescriptor>& featureValues1, std::vector<FeatureDescriptor>& featureValues2);
 	static void MatchFilter(std::vector<FeatureDescriptor>& featureValues);
+	// Cylinder Project
+	static void ProjectToCylinder(cv::Mat& src, cv::Mat& dest, float focalLength);
 };
 
 template<typename T>
