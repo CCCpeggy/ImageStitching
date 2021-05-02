@@ -145,7 +145,7 @@ void Common::Match(std::vector<FeatureDescriptor>& fValues1, std::vector<Feature
 }
 
 void Common::MatchFilter(std::vector<FeatureDescriptor>& featureValues) {
-	
+	/*
 	int N = featureValues.size();
 	double avg = 0;
 	for (int i = 0; i < N; i++) {
@@ -159,8 +159,8 @@ void Common::MatchFilter(std::vector<FeatureDescriptor>& featureValues) {
 			featureValues[i].matchPoint = nullptr;
 		}
 	}
-
-	/*
+	*/
+	
 	std::vector<std::pair<FeatureDescriptor*, FeatureDescriptor*> >  matchPoints;
 	for (int i = 0; i < featureValues.size(); i++) {
 		if (featureValues[i].matchPoint) {
@@ -242,7 +242,7 @@ void Common::MatchFilter(std::vector<FeatureDescriptor>& featureValues) {
 			matchPoints[i].first->matchPoint = nullptr;
 		}
 	}
-	*/
+	
 }
 
 void Common::ProjectToCylinder(cv::Mat& src, cv::Mat& dest, float f) {
@@ -273,5 +273,109 @@ void Common::ProjectToCylinder(cv::Mat& src, cv::Mat& dest, float f) {
 		}
 	}
 	cv::remap(src, dest, mMapX, mMapY, cv::INTER_CUBIC, cv::BORDER_CONSTANT, cv::Scalar(0));
-	//cv::imwrite("cylinder.png", dest);
+	//cv::imwrite(std::to_string(rand()) + "cylinder.png", dest);
+}
+
+cv::Mat Common::FindHomography(const std::vector<FeatureDescriptor>& fPairs, int N) {
+	srand(time(NULL));
+	std::vector<cv::Point2d> srcPoint, destPoint;
+	cv::Mat result(3, 3, CV_64F, (double)0);
+
+	for (int i = 0; i < fPairs.size(); i++) {
+		if (fPairs[i].matchPoint != nullptr) {
+			srcPoint.push_back(cv::Point2d(fPairs[i].x, fPairs[i].y));
+			destPoint.push_back(cv::Point2d(fPairs[i].matchPoint->x, fPairs[i].matchPoint->y));
+		}
+	}
+
+	int numOfPoints = srcPoint.size();
+	double errorNum = INFINITY;
+	for (int i = 0; i < numOfPoints; i++) {
+		double localError = 0;
+		double dx = srcPoint[i].x - destPoint[i].x;
+		double dy = srcPoint[i].y - destPoint[i].y;
+
+		for (int j = 0; j < numOfPoints; j++) {
+			double firstTerm = srcPoint[i].x - (destPoint[i].x + dx);
+			double secondTerm = srcPoint[i].y - (destPoint[i].y + dy);
+			localError += firstTerm * firstTerm + secondTerm * secondTerm;
+		}
+		if (localError < errorNum) {
+			errorNum = localError;
+			result.at<double>(0, 2) = dx;
+			result.at<double>(1, 2) = dy;
+		}
+	}
+	result.at<double>(0, 0) = 1;
+	result.at<double>(1, 1) = 1;
+	result.at<double>(2, 2) = 1;
+
+	/*
+	// RANSAC: N¦¸
+	for (int i = 0; i < N; i++) {
+		cv::Mat A(8, 9, CV_64F, (double)0);
+		cv::Mat h(9, 1, CV_64F, (double)0);
+		cv::Mat b(8, 1, CV_64F, (double)0);
+		// Fill Matrix A and Matrix b
+		for (int k = 0; k < 4; k++) {
+			int index = rand() % numOfPoints;
+			A.at<double>(2 * k, 0) = srcPoint[index].x;
+			A.at<double>(2 * k, 1) = srcPoint[index].y;
+			A.at<double>(2 * k, 2) = 1;
+			A.at<double>(2 * k, 6) = -srcPoint[index].x * destPoint[index].x;
+			A.at<double>(2 * k, 7) = -srcPoint[index].y * destPoint[index].x;
+							 
+			A.at<double>(2 * k + 1, 3) = srcPoint[index].x;
+			A.at<double>(2 * k + 1, 4) = srcPoint[index].y;
+			A.at<double>(2 * k + 1, 5) = 1;
+			A.at<double>(2 * k + 1, 6) = -srcPoint[index].x * destPoint[index].y;
+			A.at<double>(2 * k + 1, 7) = -srcPoint[index].y * destPoint[index].y;
+
+			A.at<double>(2 * k, 8) = -destPoint[index].x;
+			A.at<double>(2 * k + 1, 8) = -destPoint[index].y;
+							 
+			b.at<double>(2 * k, 0) = destPoint[index].x;
+			b.at<double>(2 * k + 1, 0) = destPoint[index].y;
+		}
+
+		//for (int r = 0; r < 8; r++) {
+		//	for (int c = 0; c < 8; c++) {
+		//		std::cout << A.at<double>(r, c) << "\t";
+		//	}
+		//	std::cout << std::endl;
+		//}
+		// Solve
+		cv::Mat At = A.t();
+		cv::Mat inverse = (At * A).inv();
+		h = inverse * At * b;
+		// h normalize
+		for (int k = 0; k < 9; k++)
+			h.at<double>(k, 0) /= h.at<double>(8, 0);
+		// Compute local error
+		double localError = 0;
+		for (int k = 0; k < numOfPoints; k++) {
+			double divider =
+				h.at<double>(6, 0) * srcPoint[k].x +
+				h.at<double>(7, 0) * srcPoint[k].y +
+				h.at<double>(8, 0);
+			double firstTerm = destPoint[k].x - 
+				(h.at<double>(0, 0) * srcPoint[k].x + h.at<double>(1, 0) * srcPoint[k].y + h.at<double>(2, 0)) / divider;
+			double secondTerm = destPoint[k].y - 
+				(h.at<double>(3, 0) * srcPoint[k].x + h.at<double>(4, 0) * srcPoint[k].y + h.at<double>(5, 0)) / divider;
+
+			localError += firstTerm * firstTerm + secondTerm * secondTerm;
+		}
+
+		if (localError < errorNum) {
+			errorNum = localError;
+			for (int r = 0; r < 3; r++) {
+				for (int c = 0; c < 3; c++) {
+					result.at<double>(r, c) = h.at<double>(r * 3 + c, 0);
+				}
+			}
+			std::cout << "error update" << std::endl;
+		}
+	}
+	*/
+	return result;
 }

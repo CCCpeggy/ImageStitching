@@ -4,6 +4,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/opencv.hpp>
 #include <iostream>
 #define HOME_TEST 
 
@@ -88,12 +89,12 @@ int main() {
 		cv::imread("../../Images/test/Mt.Qixing_2/Mt.Qixing02.jpg"),
 		cv::imread("../../Images/test/Mt.Qixing_2/Mt.Qixing03.jpg"),
 		cv::imread("../../Images/test/Mt.Qixing_2/Mt.Qixing04.jpg"),
-		//cv::imread("../../Images/test/Mt.Qixing_2/Mt.Qixing05.jpg"),
-		//cv::imread("../../Images/test/Mt.Qixing_2/Mt.Qixing06.jpg"),
-		//cv::imread("../../Images/test/Mt.Qixing_2/Mt.Qixing07.jpg"),
-		//cv::imread("../../Images/test/Mt.Qixing_2/Mt.Qixing08.jpg"),
+		cv::imread("../../Images/test/Mt.Qixing_2/Mt.Qixing05.jpg"),
+		cv::imread("../../Images/test/Mt.Qixing_2/Mt.Qixing06.jpg"),
+		cv::imread("../../Images/test/Mt.Qixing_2/Mt.Qixing07.jpg"),
+		cv::imread("../../Images/test/Mt.Qixing_2/Mt.Qixing08.jpg"),
 	};
-	const int size = 4;
+	const int size = 8;
 #endif // HOME_TEST
 
 	// cast to cylinder
@@ -121,57 +122,112 @@ int main() {
 		featureValues.push_back(Common::Process(featurePoints, img[i]));
 	}
 
-	// blending的程式碼，還沒整理
-	//cv::Mat result2(img[0].rows, img[0].cols * size, img[0].type());
-	//for (int y = 0; y < img[0].rows; y++) {
-	//	for (int x = 0; x < img[0].cols; x++) {
-	//		for (int c = 0; c < 3; c++)
-	//			result2.at<cv::Vec3b>(y, x)[c] = img[0].at<cv::Vec3b>(y, x)[c];
-	//	}
-	//}
-	//int dx = 0, dy = 0;
-	//for (int i = 1; i < size; i++) {
-	//	Common::Match(featureValues[i - 1], featureValues[i]);
-	//	Common::MatchFilter(featureValues[i - 1]);
-	//	std::vector<FeatureDescriptor> mData;
-	//	for (int j = 0; j < featureValues[i - 1].size(); j++) {
-	//		if (featureValues[i - 1][j].matchPoint != nullptr)
-	//			mData.push_back(featureValues[i - 1][j]);
-	//	}
-	//	FeatureDescriptor temp = mData[rand() % mData.size()];
-	//	int localDx = temp.x - temp.matchPoint->x;
-	//	int localDy = temp.y - temp.matchPoint->y;
+	for (int i = 0; i < size - 1; i++) {
+		Common::Match(featureValues[i], featureValues[i + 1]);
+		Common::MatchFilter(featureValues[i]);
+	}
+
+	//for (int i = 0; i < size - 1; i++) {
+	//	cv::Mat h = Common::FindHomography(featureValues[i]);
+	//	cv::Mat ttt = img[i].clone();
+	//	cv::Mat out;
+	//	cv::warpPerspective(img[i + 1], out, h, img[i].size());
 	//
 	//	for (int y = 0; y < img[i].rows; y++) {
 	//		for (int x = 0; x < img[i].cols; x++) {
-	//			int newX = x + dx + localDx;
-	//			int newY = y + dy + localDy;
-	//			if (newX < result2.cols && newX >= 0 &&
-	//				newY < result2.rows && newY >= 0) {
-	//
-	//				cv::Scalar mColor = result2.at<cv::Vec3b>(newY, newX);
-	//				if (mColor != cv::Scalar(0, 0, 0)) {
-	//					double alpha = (double)((img[i].cols + dx) - newX) / (double)(img[i].cols - localDx);
-	//					if (alpha > 1)
-	//						std::cout << alpha << std::endl;
-	//					for (int c = 0; c < 3; c++) {
-	//						result2.at<cv::Vec3b>(newY, newX)[c] =
-	//							result2.at<cv::Vec3b>(newY, newX)[c] * alpha +
-	//							img[i].at<cv::Vec3b>(y, x)[c] * (1 - alpha);
-	//					}
-	//				}
-	//				else
-	//					for (int c = 0; c < 3; c++)
-	//						result2.at<cv::Vec3b>(newY, newX)[c] = img[i].at<cv::Vec3b>(y, x)[c];
+	//			cv::Scalar temp = out.at<cv::Vec3b>(y, x);
+	//			cv::Scalar temp2 = ttt.at<cv::Vec3b>(y, x);
+	//			if (temp == cv::Scalar(0, 0, 0)) {
+	//				out.at<cv::Vec3b>(y, x) = ttt.at<cv::Vec3b>(y, x);
+	//			}
+	//			else if (temp2 != cv::Scalar(0, 0, 0) && temp != cv::Scalar(0, 0, 0)) {
+	//				out.at<cv::Vec3b>(y, x) = out.at<cv::Vec3b>(y, x) * 0.5 +
+	//					ttt.at<cv::Vec3b>(y, x) * 0.5;
 	//			}
 	//		}
 	//	}
-	//	dx += localDx;
-	//	dy += localDy;
+	//	cv::imwrite(std::to_string(i) + "_concat.png", out);
 	//}
-	//// 輸出result.png
-	//cv::imwrite("result.png", result2);
+	//system("pause");
 	//return 0;
+	
+	//for (int i = 0; i < size - 1; i++) {
+	//	std::vector<cv::Point2f> pair1;
+	//	std::vector<cv::Point2f> pair2;
+	//	for (int j = 0; j < featureValues[i].size(); j++) {
+	//		if (featureValues[i][j].matchPoint != nullptr) {
+	//			pair1.push_back(cv::Point2f(featureValues[i][j].x, featureValues[i][j].y));
+	//			pair2.push_back(cv::Point2f(
+	//				featureValues[i][j].matchPoint->x,
+	//				featureValues[i][j].matchPoint->y));
+	//		}
+	//	}
+	//	cv::Mat ttt = img[i].clone();
+	//	cv::Mat h = cv::findHomography(pair2, pair1);
+	//	cv::Mat out;
+	//	cv::warpPerspective(img[i + 1], out, h, img[i].size());
+	//
+	//	for (int y = 0; y < img[i].rows; y++) {
+	//		for (int x = 0; x < img[i].cols; x++) {
+	//			cv::Scalar temp = out.at<cv::Vec3b>(y, x);
+	//			cv::Scalar temp2 = ttt.at<cv::Vec3b>(y, x);
+	//			if (temp == cv::Scalar(0, 0, 0)) {
+	//				out.at<cv::Vec3b>(y, x) = ttt.at<cv::Vec3b>(y, x);
+	//			}
+	//			else if (temp2 != cv::Scalar(0, 0, 0) && temp != cv::Scalar(0, 0, 0)) {
+	//				out.at<cv::Vec3b>(y, x) = out.at<cv::Vec3b>(y, x) * 0.5 +
+	//					ttt.at<cv::Vec3b>(y, x) * 0.5;
+	//			}
+	//		}
+	//	}
+	//	cv::imwrite(std::to_string(i) + "_concat.png", out);
+	//}
+	//return 0;
+
+	// blending的程式碼，還沒整理
+	cv::Mat result2(img[0].rows, img[0].cols * size, img[0].type());
+	for (int y = 0; y < img[0].rows; y++) {
+		for (int x = 0; x < img[0].cols; x++) {
+			for (int c = 0; c < 3; c++)
+				result2.at<cv::Vec3b>(y, x)[c] = img[0].at<cv::Vec3b>(y, x)[c];
+		}
+	}
+	int dx = 0, dy = 0;
+	for (int i = 1; i < size; i++) {
+		cv::Mat h = Common::FindHomography(featureValues[i - 1]);
+		int localDx = h.at<double>(0, 2);
+		int localDy = h.at<double>(1, 2);
+	
+		for (int y = 0; y < img[i].rows; y++) {
+			for (int x = 0; x < img[i].cols; x++) {
+				int newX = x + dx + localDx;
+				int newY = y + dy + localDy;
+				if (newX < result2.cols && newX >= 0 &&
+					newY < result2.rows && newY >= 0) {
+	
+					cv::Scalar mColor = result2.at<cv::Vec3b>(newY, newX);
+					if (mColor != cv::Scalar(0, 0, 0)) {
+						double alpha = (double)((img[i].cols + dx) - newX) / (double)(img[i].cols - localDx);
+						if (alpha > 1)
+							std::cout << alpha << std::endl;
+						for (int c = 0; c < 3; c++) {
+							result2.at<cv::Vec3b>(newY, newX)[c] =
+								result2.at<cv::Vec3b>(newY, newX)[c] * alpha +
+								img[i].at<cv::Vec3b>(y, x)[c] * (1 - alpha);
+						}
+					}
+					else
+						for (int c = 0; c < 3; c++)
+							result2.at<cv::Vec3b>(newY, newX)[c] = img[i].at<cv::Vec3b>(y, x)[c];
+				}
+			}
+		}
+		dx += localDx;
+		dy += localDy;
+	}
+	// 輸出result.png
+	cv::imwrite("result.png", result2);
+	return 0;
 
 	// 預設照片的順序是從左到右排好
 	// 在已經有特徵點的情況下

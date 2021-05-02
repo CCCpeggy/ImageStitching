@@ -3,6 +3,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <iostream>
+#include <ctime>
 
 const int fSize = 11;
 
@@ -38,6 +39,8 @@ public:
 	static void MatchFilter(std::vector<FeatureDescriptor>& featureValues);
 	// Cylinder Project
 	static void ProjectToCylinder(cv::Mat& src, cv::Mat& dest, float focalLength);
+	// Search Homography by RANSAC
+	static cv::Mat FindHomography(const std::vector<FeatureDescriptor>& fPairs, int N = 1000);
 };
 
 template<typename T>
